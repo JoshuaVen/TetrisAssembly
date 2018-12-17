@@ -657,7 +657,7 @@ PROCEDURE_ATTEMPT_LINE_REMOVAL PROC FAR
   MOV DI, 47815
   MOV CX, 104 ; we'll check at most all but one lines of the play area
                 ; there are 20 block lines, and each block line is 5 pixels 
-                ; tall with an additional top line to accomodate pieces with 
+                ; tall with an additional top line to accommodate pieces with 
                 ; an empty top block line in some of their orientations
   
   ; for each line moving upwards
