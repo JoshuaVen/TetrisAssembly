@@ -12,119 +12,353 @@ DATASEG SEGMENT PARA 'Data'
   MSG_ROTATE DB "SPC - Rotate $"
   MSG_QUIT DB "Q - Quit $"
   MSG_LINES DB "Lines $"
-  MSG_GAME_OVER DB '______________________________________________________________________________',0ah,0dh
-   		   DB ' ||\_____\ |\______\ |\__\     /\__\|\________\                               |',0ah,0dh
-           DB ' |||      |||   _   |||   \   //   |||   _____|_____                          |',0ah,0dh
-           DB ' |||  ____|||  /|\  |||    \ //    |||  |_\ |\______\  ______  ______  _____  |',0ah,0dh
-           DB ' ||| |\__\ || |__\| |||     \/  /| |||   __|||  ___  ||\__\__||\_____\|\____\ |',0ah,0dh
-           DB ' ||| |\|_ |||  ___  |||  \     /|| |||  |___|| |   | |||  |  |||  ___|||  _  ||',0ah,0dh
-           DB ' ||| |_\| |||   |   |||  |\___/ || |||  |___|| |   | |||  |  |||   _| || |_/ ||',0ah,0dh
-           DB ' |||      |||   |   |||  |      || |||      || |___| |\|  |  |||  |_\ ||    < |',0ah,0dh
-           DB ' |\|______|\|___|___|\|__|      \|_|\|______\|_______| \____/ \|_____|\|_|\__\|',0ah,0dh
-           DB ' |____________________________________________________________________________|',0ah,0dh
-           DB ' ',0ah,0dh
-           DB ' ',0ah,0dh
-           DB ' ',0ah,0dh
-           DB 'Press ESC to return to menu...',0ah,0dh,'$'
-  MSG_TETRIS DB "TETRIS $"
+  MSG_GAME_OVER DB "GAME OVER $"
+  LOAD_STR	DB		'Loading...$'
+  OPTION1	DB 	'START$'
+  OPTION2	DB 	'INSTRUCTIONS$'
+  OPTION3	DB 	'HIGHEST SCORE$'
+  OPTION4	DB 	'QUIT$'
+  PRESSESC  DB 'Press ESC to return to menu... ',0ah,0dh,'$'
+
   
+  TITLECURSORCOL DB 02	
+  TITLECURSORROW DB 10H
+  BIRDPOSCOL DB 0AH	
+  BIRDPOSROW DB 0AH		
+  
+  TEMP		DB		?
+  TEMP2		DB 		1
+  CHECKER 	DB 		0
+  BUTTON_PRESSED		DB 		?
+  BUTTON_PRESSED2		DB 		?
+  
+   MESSAGE1 DB '_________________________________________________',0ah,0dh
+   		   DB ' | ####### ####### ####### ######    ###    ##### |',0ah,0dh
+           DB ' |    #    #          #    #     #    #    #     #|',0ah,0dh
+           DB ' |    #    #          #    #     #    #    #      |',0ah,0dh
+           DB ' |    #    #####      #    ######     #     ##### |',0ah,0dh
+           DB ' |    #    #          #    #   #      #          #|',0ah,0dh
+           DB ' |    #    #          #    #    #     #    #     #|',0ah,0dh
+           DB ' |    #    #######    #    #     #   ###    ##### |',0ah,0dh
+           DB ' |                                                |',0ah,0dh
+           DB ' |________________________________________________|',0ah,0dh,'$'
+  
+  MESSAGE2	DB '------------------------------------------------------------------------------',0ah,0dh,'$'
+  MESSAGE3	DB '------------------------------------------------------------------------------',0ah,0dh,'$'
+
+   FLAG	DB 	0
+  FLAG2	DB 	0
+  DELAY DB 0
+   SCORE1 DB 0
+  SCORE2 DB 0
+  STRLEN DW 3
+  PIPEROW DB 0
+  PIPECOL DB 4FH
+  PIPECOL2 DB 0
+  PIPECOL3 DB 0
+  PIPECOL4 DB 0
+  RECORD_STR    DB 4H DUP('$')  ;length = original length of record + 1 (for $)
+  READED_STR    DB 4H DUP('$')  ;length = original length of record + 1 (for $)
+  RECORD_STR1   DB '000'
+  PATHFILENAME  DB 'Hscore.txt', 00H
+  FILEHANDLE    DW ?
+  HIGHSCORE_TEXT DB 'HIGHSCORE: $'
+   HOLE DB 4
+  HOLE2 DB 4
+  HOLE3 DB 4
+  HOLE4 DB 4
   ;MAKE GAME OVER DB
   ;MAKE START GAME DB
   
-  DELAY_CENTISECONDS DB 5 ;delay between frames in hundredths of a second
+  DELAY_CENTISECONDS DB 5
   SCREEN_WIDTH DW 320
   
-  BLOCK_SIZE DW 5 ;block size in pixels
-  BLOCKS_PER_PIECE DW 4 ;number of blocks in a piece
+  BLOCK_SIZE DW 5
+  BLOCKS_PER_PIECE DW 4
   
-  ; the reason why pieces change colour is to facilitate collision detection
-  ; since when rotating, each piece is allowed to collide with pixels of the
-  ; same colour as itself, but is not allowed to collide with versions of 
-  ; itself which have already cemented
-  COLOR_CEMENTED_PIECE DW 40, 48, 54, 14, 42, 36, 34 ;colors for pieces w/c have cemented
-  COLOR_FALLING_PIECE DW 39, 47, 55, 44, 6, 37, 33 ;colors for pieces w/c are falling
+  COLOR_CEMENTED_PIECE DW 40, 48, 54, 14, 42, 36, 34
+  COLOR_FALLING_PIECE DW 39, 47, 55, 44, 6, 37, 33
   
-  ;piece definitions begin here
-  ;
-  ; - piece_definition variable moves between piece_t, piece_j, etc.
-  ; - piece_orientation_index variable moves between 0 and 3, offsetting
-  ;                     within a piece's four possible orientations
   PIECES_ORIGIN LABEL WORD
-  PIECE_T DW 1605, 1610, 1615, 3210 ;point DOWN
-          DW 10, 1610, 1615, 3210   ;point RIGHT
-		  DW 10, 1605, 1610, 1615   ;point UP
-		  DW 10, 1605, 1610, 3210   ;point LEFT
+  PIECE_T DW 1605, 1610, 1615, 3210 ;DOWN
+          DW 10, 1610, 1615, 3210   ;RIGHT
+		  DW 10, 1605, 1610, 1615   ;UP
+		  DW 10, 1605, 1610, 3210   ;LEFT
   
-  PIECE_J DW 1605, 1610, 1615, 3215 ;point DOWN
-          DW 10, 15, 1610, 3210     ;point RIGHT
-		  DW 5, 1605, 1610, 1615    ;point UP
-		  DW 10, 1610, 3205, 3210   ;point LEFT
+  PIECE_J DW 1605, 1610, 1615, 3215
+          DW 10, 15, 1610, 3210
+		  DW 5, 1605, 1610, 1615
+		  DW 10, 1610, 3205, 3210
   
-  PIECE_L DW 1605, 1610, 1615, 3205 ;point DOWN
-          DW 10, 1610, 3210, 3215   ;point RIGHT
-		  DW 15, 1605, 1610, 1615   ;point UP
-		  DW 5, 10, 1610, 3210      ;point LEFT
+  PIECE_L DW 1605, 1610, 1615, 3205
+          DW 10, 1610, 3210, 3215
+		  DW 15, 1605, 1610, 1615
+		  DW 5, 10, 1610, 3210
   
-  PIECE_Z DW 1605, 1610, 3210, 3215 ;point DOWN
-          DW 15, 1610, 1615, 3210   ;point RIGHT
-		  DW 1605, 1610, 3210, 3215 ;point UP
-		  DW 15, 1610, 1615, 3210   ;point LEFT
+  PIECE_Z DW 1605, 1610, 3210, 3215
+          DW 15, 1610, 1615, 3210
+		  DW 1605, 1610, 3210, 3215
+		  DW 15, 1610, 1615, 3210
   
-  PIECE_S DW 1610, 1615, 3205, 3210 ;point DOWN
-          DW 10, 1610, 1615, 3215   ;point RIGHT
-		  DW 1610, 1615, 3205, 3210 ;point UP
-		  DW 10, 1610, 1615, 3215   ;point LEFT
+  PIECE_S DW 1610, 1615, 3205, 3210
+          DW 10, 1610, 1615, 3215
+		  DW 1610, 1615, 3205, 3210
+		  DW 10, 1610, 1615, 3215
   
-  PIECE_SQUARE DW 1605, 1610, 3205, 3210 ;point DOWN
-               DW 1605, 1610, 3205, 3210 ;point RIGHT
-			   DW 1605, 1610, 3205, 3210 ;point UP
-			   DW 1605, 1610, 3205, 3210 ;point LEFT
+  PIECE_SQUARE DW 1605, 1610, 3205, 3210
+               DW 1605, 1610, 3205, 3210
+			   DW 1605, 1610, 3205, 3210
+			   DW 1605, 1610, 3205, 3210
   
-  PIECE_LINE DW 1600, 1605, 1610, 1615 ;point DOWN
-             DW 10, 1610, 3210, 4810   ;point RIGHT
-			 DW 1600, 1605, 1610, 1615 ;point UP
-			 DW 10, 1610, 3210, 4810   ;point LEFT
+  PIECE_LINE DW 1600, 1605, 1610, 1615
+             DW 10, 1610, 3210, 4810
+			 DW 1600, 1605, 1610, 1615
+			 DW 10, 1610, 3210, 4810
 			 
-  MSG_SCORE_BUFFER DB "000$" ;string representation of score
-  SCORE DW 0 ;keeps score (total number of cleared lines)
+  MSG_SCORE_BUFFER DB "000$"
+  SCORE DW 0
   
-  CURRENT_FRAME DW 0 ;global frame counter
+  CURRENT_FRAME DW 0
   
-  DELAY_STOPPING_POINT_CENTISECONDS DB 0 ;convenience variable used by the
-                                         ;delay subroutine
-  DELAY_INITIAL DB 0 ;another convenience variable used by the 
-                     ;delay subroutine
+  INSTRUCT  DB 'INSTRUCTIONS',0ah,0dh
+  			DB '------------------------------------------------------------------------------',0ah,0dh
+  			DB 'Press the SPACEBAR Button to hard drop a block. use left and right arrow keys to',0ah,0dh
+  			DB 'move the block. Each line that fills clears and scores by one. ',0ah,0dh
+  			DB 'Reach the highest point by beating the previous high score!,',0ah,0dh
+  			DB ' ',0ah,0dh
+  			DB ' ',0ah,0dh
+  			DB ' ',0ah,0dh
+  			DB 'Press ESC to return to menu... ',0ah,0dh,'$'
+
+  STAR    DB '-------------------------------------------------------------------------------',0ah,0dh
+        DB '                               |      /\      |                                ',0ah,0dh
+        DB '                               |  ___/  \___  |                                ',0ah,0dh
+        DB '                               |  \  _()_  /  |                                ',0ah,0dh
+        DB '                               |   \/    \/   |                                ',0ah,0dh
+        DB '                               |   /  /\  \   |                                ',0ah,0dh
+        DB '                               |  /__/  \__\  |                                ',0ah,0dh
+        DB '-------------------------------------------------------------------------------',0ah,0dh,'$'
+
+		
+  DELAY_STOPPING_POINT_CENTISECONDS DB 0
+  DELAY_INITIAL DB 0
   
-  RANDOM_NUMBER DB 0 ;incremented by various events 
-                     ;such as input, clock polling, etc.
+  RANDOM_NUMBER DB 0
   
-  MUST_QUIT DB 0 ;flag indicating that the player is quitting the game
+  MUST_QUIT DB 0
   
-  CEMENT_COUNTER DB 0 ;number of frames during which a piece which
-                      ;can no longer fall is allowed to still be
-                      ;controlled by the player
+  CEMENT_COUNTER DB 0
   
-  PLAYER_INPUT_PRESSED DB 0 ;flag indicating the presence of input
+  PLAYER_INPUT_PRESSED DB 0
   
-  CURRENT_PIECE_COLOR_INDEX DW 0 ;index of current color
-  NEXT_PIECE_COLOR_INDEX DW 0 ;used to display next piece
-  NEXT_PIECE_ORIENTATION_INDEX DW 0 ;used to display next piece
+  CURRENT_PIECE_COLOR_INDEX DW 0
+  NEXT_PIECE_COLOR_INDEX DW 0
+  NEXT_PIECE_ORIENTATION_INDEX DW 0
   
-  PIECE_DEFINITION DW 0 ;pointer to first of the group 
-                        ;of four piece orientations for this piece
-  PIECE_ORIENTATION_INDEX DW 0 ;0 through 3, index of current orientation
-                               ;among all of the piece's orientations
+  PIECE_DEFINITION DW 0
+  PIECE_ORIENTATION_INDEX DW 0
   
-  PIECE_BLOCKS DW 0, 0, 0, 0 ;stores positions of blocks of current piece
-  PIECE_POSITION DW 0 ;position of the top left corner of the falling 4 by 4 piece
-  PIECE_POSITION_DELTA DW 0 ;frame-by-frame change in current piece position
+  PIECE_BLOCKS DW 0, 0, 0, 0
+  PIECE_POSITION DW 0
+  PIECE_POSITION_DELTA DW 0
 DATASEG ENDS  
 ;----------------------------------------------------------- 
 CODESEG SEGMENT PARA 'Code' 
   ASSUME SS:STACKSEG, DS:DATASEG, CS:CODESEG
+  
+  
 START:
   MOV AX, DATASEG
   MOV DS, AX
+
+  MENU:
+  		MOV FLAG, 0
+  		CALL _TITLE
+  		MOV HOLE, 4
+  		MOV HOLE2, 4
+  		MOV HOLE3, 4
+  		MOV HOLE4, 4
+  		MOV PIPECOL, 0
+  		MOV PIPECOL2, 0
+  		MOV PIPECOL3, 0
+  		MOV PIPECOL4, 0
+      MOV SCORE1, 0
+      MOV SCORE2, 0
+      MOV SCORE, 0
+
+_LOOP_TITLE:
+    CALL _GET_KEY
+
+	MOV		DL, TITLECURSORCOL ;col
+	MOV		DH, TITLECURSORROW ;row
+	CALL	_SET_CURSOR
+
+	MOV		AL, '*'
+	MOV		AH, 02H
+	MOV		DL, AL
+	INT		21H
+
+	CALL	_DELAY  		
+
+	CMP BUTTON_PRESSED2, 0DH ;enter key is pressed
+  	JNE NEXTU
+    JMP CHECK_OPTION
+	
+	NEXTU:
+	CMP BUTTON_PRESSED, 4BH ;cursor moves left when left key is pressed
+  	JE _LEFT
+  	CMP BUTTON_PRESSED, 4DH ;cursor moves right when right key is pressed
+  	JE _RIGHT
+	
+	JMP _LOOP_TITLE
+	
+	JMP EXIT
+	
+_RIGHT:;when right button is pressed(from right to left)
+		CMP TEMP2, 4
+		JE	ENDR
+  		INC TEMP2
+		CMP TEMP2, 1
+		JE FIRSTR
+		CMP TEMP2, 2
+		JE FRIGHT
+		CMP TEMP2, 3
+		JE SRIGHT
+		CMP TEMP2, 4
+		JE TRIGHT
+
+		FIRSTR:;moves cursor to the first option at the menu
+		MOV TITLECURSORCOL, 02
+		CALL _TITLE
+		JMP ENDR
+
+		FRIGHT:;moves cursor to the second option at the menu
+		ADD TITLECURSORCOL, 0AH
+		CALL _TITLE
+		JMP ENDR
+
+		SRIGHT:;moves cursor to the third option at the menu
+		ADD TITLECURSORCOL, 11H
+		CALL _TITLE
+		JMP ENDR
+
+		TRIGHT:;moves cursor to the last option at the menu
+		ADD TITLECURSORCOL, 12H
+		CALL _TITLE
+		JMP ENDR
+
+		ENDR:
+		JMP _LOOP_TITLE
+		
+_LEFT:;when left button is pressed(from left to right)
+		CMP TEMP2, 1
+		JE	ENDL
+		DEC TEMP2
+		CMP TEMP2, 1
+		JE FIRSTL
+		CMP TEMP2, 2
+		JE FLEFT
+		CMP TEMP2, 3
+		JE SLEFT
+		CMP TEMP2, 4
+		JE TLEFT
+
+		FIRSTL:;moves cursor to the first option at the menu
+		MOV TITLECURSORCOL, 02
+		CALL _TITLE
+		JMP ENDL
+
+		FLEFT:;moves cursor to the second option at the menu
+		SUB TITLECURSORCOL, 11H
+		CALL _TITLE
+		JMP ENDL
+
+		SLEFT:;moves cursor to the third option at the menu
+		SUB TITLECURSORCOL, 12H
+		CALL _TITLE
+		JMP ENDL
+
+		TLEFT:;moves cursor to the last option at the menu
+		SUB TITLECURSORCOL, 0AH
+		CALL _TITLE
+		JMP ENDL
+
+		ENDL:
+		JMP _LOOP_TITLE
+	
+	CHECK_OPTION:
+		CMP TEMP2, 1
+		JNE CHECKT2
+    ;JMP START_GAME
+
+    CHECKT2:
+		CMP TEMP2, 2
+		JE INSTRUCTIONS
+		CMP TEMP2, 3
+		JE HIGHSCOREPAGE1
+		
+HIGHSCOREPAGE1:
+  MOV FLAG, 04
+  CALL _CLEAR_SCREEN_LOAD
+
+  MOV DL, 0
+  MOV DH, 0
+  CALL _SET_CURSOR
+  
+  LEA DX, STAR
+  MOV AH, 09H
+  INT 21H
+
+  MOV DL, 1FH
+  MOV DH, 08H
+  CALL _SET_CURSOR
+
+  LEA DX, HIGHSCORE_TEXT
+  MOV AH, 09H
+  INT 21H
+
+  CALL FILEREAD
+  LEA DX, READED_STR
+  MOV AH, 09H
+  INT 21H
+
+  MOV DL, 0
+  MOV DH, 14H
+  CALL _SET_CURSOR
+
+  LEA DX, PRESSESC
+  MOV AH, 09H
+  INT 21H
+
+  LOOPER1:
+  CALL _GET_KEY
+  JMP LOOPER1
+
+		
+		JMP EXIT
+
+		INSTRUCTIONS:
+		MOV FLAG, 2
+		CALL _CLEAR_SCREEN_LOAD
+		MOV DL, 00
+		MOV DH, 00
+		CALL _SET_CURSOR
+		LEA DX, INSTRUCT
+		CALL _PRINT_TEXT
+
+		INSTRUCTION_LOOP:
+				CALL _GET_KEY
+			JMP INSTRUCTION_LOOP
+
+	
+
+
+	
+	
+ 	
+  JMP _LOOP_TITLE
+
+  JMP EXIT
   
   CALL INITIALIZATION
   
@@ -132,6 +366,239 @@ START:
 ;----------------------------------------------------------- 
 ;Procedures
 ;----------------------------------------------------------- 
+
+HIGHSCOREPAGE PROC NEAR
+  MOV FLAG, 04
+  CALL _CLEAR_SCREEN_LOAD
+
+  MOV DL, 0
+  MOV DH, 0
+  CALL _SET_CURSOR
+  
+  LEA DX, STAR
+  MOV AH, 09H
+  INT 21H
+
+  MOV DL, 1FH
+  MOV DH, 08H
+  CALL _SET_CURSOR
+
+  LEA DX, HIGHSCORE_TEXT
+  MOV AH, 09H
+  INT 21H
+
+  CALL FILEREAD
+  LEA DX, READED_STR
+  MOV AH, 09H
+  INT 21H
+
+  MOV DL, 0
+  MOV DH, 14H
+  CALL _SET_CURSOR
+
+  LEA DX, PRESSESC
+  MOV AH, 09H
+  INT 21H
+
+  LOOPER:
+  CALL _GET_KEY
+  JMP LOOPER
+
+HIGHSCOREPAGE ENDP
+
+_PRINT_TEXT PROC NEAR
+	MOV AH, 09H
+	INT 21H
+	RET
+_PRINT_TEXT ENDP
+
+_CLEAR_SCREEN_TITLE PROC NEAR
+			MOV AX, 0600H
+			MOV BH, 07H
+			MOV CX, 0000H
+			MOV DX, 184FH
+			INT 10H
+			MOV AX, 0600H
+			MOV BH, 57H
+			MOV CX, 0301H
+			MOV DX, 0D4EH
+			INT 10H
+			MOV AX, 0600H
+			MOV BH, 57H
+			MOV CX, 0F01H
+			MOV DX, 114EH
+			INT 10H
+			RET
+_CLEAR_SCREEN_TITLE ENDP
+
+FILEREAD PROC NEAR
+  ;open file
+  MOV AH, 3DH           ;requst open file
+  MOV AL, 00            ;read only; 01 (write only); 10 (read/write)
+  LEA DX, PATHFILENAME
+  INT 21H
+  ;JC DISPLAY_ERROR1
+  MOV FILEHANDLE, AX
+
+  ;read file
+  MOV AH, 3FH           ;request read record
+  MOV BX, FILEHANDLE    ;file handle
+  MOV CX, STRLEN            ;record length
+  LEA DX, READED_STR    ;address of input area
+  INT 21H
+  ;JC DISPLAY_ERROR2
+  ;CMP AX, 00            ;zero bytes read?
+  ;JE DISPLAY_ERROR3
+
+
+  ;close file handle
+  MOV AH, 3EH           ;request close file
+  MOV BX, FILEHANDLE    ;file handle
+  INT 21H
+
+RET
+FILEREAD ENDP
+
+
+_GET_KEY	PROC	NEAR
+			MOV		AH, 01H		;check for input
+			INT		16H
+
+			JZ		__LEAVETHIS
+
+			MOV		AH, 00H		;get input	MOV AH, 10H; INT 16H
+			INT		16H
+			CMP AL, 1BH			;compares AL to 'esc'
+ 			;JE CHECK_2				;exits when 'esc' is pressed
+ 			JNE __LEAVETHIS
+ 			
+ 			CHECK_2:
+ 			CMP FLAG, 1
+ 			JLE __LEAVETHIS
+ 			JMP MENU
+
+	__LEAVETHIS:
+			MOV 	BUTTON_PRESSED2, AL
+			MOV		BUTTON_PRESSED, AH
+			RET
+_GET_KEY 	ENDP
+
+_TITLE PROC NEAR
+  CALL _CLEAR_SCREEN_TITLE
+ ;title
+  MOV DL, 01
+  MOV DH, 03H
+  CALL _SET_CURSOR
+  LEA DX, MESSAGE1
+  CALL _PRINT_TEXT
+
+
+ ;selection 
+  MOV DL, 01
+  MOV DH, 0FH
+  CALL _SET_CURSOR
+  LEA DX, MESSAGE2
+  CALL _PRINT_TEXT 
+  MOV DL, 03
+  MOV DH, 10H
+  CALL _SET_CURSOR
+  LEA DX, OPTION1
+  CALL _PRINT_TEXT
+  MOV DL, 0DH
+  MOV DH, 10H
+  CALL _SET_CURSOR
+  LEA DX, OPTION2
+  CALL _PRINT_TEXT  
+  MOV DL, 1EH
+  MOV DH, 10H
+  CALL _SET_CURSOR
+  LEA DX, OPTION3
+  CALL _PRINT_TEXT
+  MOV DL, 30H
+  MOV DH, 10H
+  CALL _SET_CURSOR
+  LEA DX, OPTION4
+  CALL _PRINT_TEXT
+  MOV DL, 01
+  MOV DH, 11H
+  CALL _SET_CURSOR
+  LEA DX, MESSAGE3
+  CALL _PRINT_TEXT
+
+
+  RET
+_TITLE ENDP
+
+_DELAY PROC	NEAR
+			MOV BP, 2 ;lower value faster
+			MOV SI, 2 ;lower value faster
+		DELAY2:
+			DEC BP
+			NOP
+			JNZ DELAY2
+			DEC SI
+			CMP SI, 0
+			JNZ DELAY2
+			RET
+_DELAY ENDP
+
+_CLEAR_SCREEN_LOAD PROC NEAR
+			MOV AX, 0600H
+			MOV BH, 07H
+			MOV CX, 0000H
+			MOV DX, 184FH
+			INT 10H
+			RET
+_CLEAR_SCREEN_LOAD ENDP
+
+_SET_CURSOR	PROC NEAR
+			;MOV DL,	;column
+			;MOV DH,	;row
+			MOV AH, 02H
+			MOV BH, 00H
+			INT 10H
+			RET
+_SET_CURSOR ENDP
+
+_LOADING	PROC NEAR			
+			CALL _CLEAR_SCREEN_LOAD
+
+			MOV		DL, 22H
+			MOV		DH, 11
+			CALL	_SET_CURSOR
+
+			;display loading
+			MOV		AH, 09H
+			LEA		DX, LOAD_STR
+			INT		21H
+
+			MOV		TEMP, 00
+
+	__ITERATE:
+			;set cursor
+			MOV		DL, TEMP
+			MOV		DH, 12
+			CALL	_SET_CURSOR
+
+			MOV		AL, 0DBH
+			MOV		AH, 02H
+			MOV		DL, AL
+			INT		21H
+
+			CALL	_DELAY
+
+			INC		TEMP
+			CMP		TEMP, 50H
+			JE		DONE
+
+			JMP		__ITERATE
+
+		DONE:
+			RET
+
+
+_LOADING		ENDP
+
 PROCEDURE_DISPLAY_SCORE PROC NEAR
   MOV AX, [SCORE]
   MOV DL, 100
@@ -843,10 +1310,10 @@ PROCEDURE_DRAW_SCREEN PROC FAR
 	MOV DL, 24
 	CALL PROCEDURE_PRINT_AT
 	
-	MOV BX, MSG_TETRIS
-	MOV DH, 3
-	MOV DL, 16
-	CALL PROCEDURE_PRINT_AT
+	; mov bx, msg_asmtris
+    ; mov dh, 3
+    ; mov dl, 16
+    ; call procedure_print_at
 	
 	RET
 PROCEDURE_DRAW_SCREEN ENDP  
@@ -939,334 +1406,236 @@ PROCEDURE_DISPLAY_LOGO PROC NEAR
 	  RET
 PROCEDURE_DISPLAY_LOGO ENDP
 
-_SET_CURSOR PROC NEAR
-  MOV AH, 02H
-  MOV BH, 00H
-  INT 10H
-  RET
-_SET_CURSOR ENDP
-
 PROCEDURE_DISPLAY_GAME_OVER PROC FAR
-  MOV AX, 3
-  INT 10H
+  XOR DL, DL
+  MOV AX, 45
+  MOV BX, 100
+  MOV DI, 19550
+  CALL PROCEDURE_DRAW_RECTANGLE
   
-  MOV DL, 00
-  MOV DH, 05
-  CALL _SET_CURSOR
+  MOV DL, 40
+  MOV AX, 16
+  MOV BX, 88
+  MOV DI, 29560
+  CALL PROCEDURE_DRAW_RECTANGLE
   
-  LEA DX, MSG_GAME_OVER
-  MOV AH, 09H
-  INT 21H
+  MOV DH, 12
+  MOV DL, 16
+  MOV BX, MSG_GAME_OVER
+  CALL PROCEDURE_PRINT_AT
   
   RET
 PROCEDURE_DISPLAY_GAME_OVER ENDP
+  ;all code here
   
 INITIALIZATION PROC NEAR
-    ; enter graphics mode 13h, 320x200 pixels 8bit colour
     MOV AX, 13H
     INT 10H
-    ; set keyboard parameters to be most responsive
+  
     MOV AX, 0305H
     XOR BX, BX
     INT 16H
-	
-    ; generate initial piece
+  
     CALL PROCEDURE_RANDOM_NEXT_PIECE
-    ; display controls, play area, borders, etc.
+  
     CALL PROCEDURE_DRAW_SCREEN
-;Generate a new piece and refresh next piece 
+  
   NEW_PIECE:
-    ; since we're generating a new block, a piece has just cemented, which
-    ; means that there may be updates to the score due to lines potentially 
-    ; being cleared by that last piece
     CALL PROCEDURE_DISPLAY_SCORE
 	
-	; start falling from the middle of the top of the play area
 	MOV [PIECE_POSITION], 14550
 	
-	; next piece colour index becomes current
 	MOV AX, [NEXT_PIECE_COLOR_INDEX]
 	MOV [CURRENT_PIECE_COLOR_INDEX], AX
 	
-	;setting CL to 5 to be used for shift left
 	PUSH CX
 	MOV CL, 5
-	; colours array and pieces array have corresponding entries, so use colours
-    ; index to set the piece index as well, but it has to be offset by as many
-    ; bytes as each piece occupies
-	SHL AX, CL
-	ADD AX, OFFSET PIECES_ORIGIN ; offset from first piece
-	MOV [PIECE_DEFINITION], AX ; piece_definition now points to the first of 
-                               ; four piece orientations of a specific piece
 	
-	; next piece becomes current
-	MOV AX, [NEXT_PIECE_ORIENTATION_INDEX] 
-	MOV [PIECE_ORIENTATION_INDEX], AX ;choose one of the four orientations
+	SHL AX, CL
+	
+	ADD AX, OFFSET PIECES_ORIGIN
+	MOV [PIECE_DEFINITION], AX
+	
+	MOV AX, [NEXT_PIECE_ORIENTATION_INDEX]
+	MOV [PIECE_ORIENTATION_INDEX], AX
 	
 	CALL PROCEDURE_COPY_PIECE
-	; can this piece even spawn?
+	
 	CALL PROCEDURE_CAN_PIECE_BE_PLACED
-	TEST AL, AL ; did we get a 0, meaning "can move"?
-	JZ NOT_GAME_OVER ; yes, proceed to not_game_over
+	TEST AL, AL
+	JNZ GAME_OVER1
 	
 	GAME_OVER1:
 	  CALL PROCEDURE_DISPLAY_GAME_OVER
-	  
-	  GAME_OVER_LOOP2:
-	  CALL PROCEDURE_DISPLAY_LOGO
-	  
-	  CALL PROCEDURE_DELAY
-	  
-	  MOV AX, [CURRENT_FRAME]
-	  INC AX
-	  MOV [CURRENT_FRAME], AX
-	  
-	  MOV AH, 1
-	  INT 16H
-	  JZ GAME_OVER_LOOP2
-	  
-	  XOR AH, AH
-	  INT 16H
-	  CMP AL, 'q'
-	  JNE GAME_OVER_LOOP2
-	  
-	DONE2:
-	  MOV AX, 3
-	  INT 10H
-	  RET
-	 
-	; since we've just made next piece current, we need to generate a new one
-	NOT_GAME_OVER:
+	
 	CALL PROCEDURE_RANDOM_NEXT_PIECE
 	
-; Temporarily make next piece current so that it can be displayed in the
-; "Next" piece area	
   DISPLAY_NEXT_PIECE:
-    ; erase old next piece by drawing a black 4x4 block piece on top
     MOV DI, 17805
 	MOV BX, 20
 	MOV DL, 0
 	CALL PROCEDURE_DRAW_SQUARE
 	
-	; save current piece
 	PUSH [CURRENT_PIECE_COLOR_INDEX]
 	PUSH [PIECE_DEFINITION]
 	PUSH [PIECE_ORIENTATION_INDEX]
 	PUSH [PIECE_POSITION]
-	; make next piece current - color index
-	MOV AX, [NEXT_PIECE_COLOR_INDEX]
-	MOV [CURRENT_PIECE_COLOR_INDEX], AX ;save color index
 	
-	; make next piece current - piece definition
-	MOV CL, 5
+	MOV AX, [NEXT_PIECE_COLOR_INDEX]
+	MOV [CURRENT_PIECE_COLOR_INDEX], AX
+	
 	SHL AX, CL
 	POP CX
-	ADD AX, OFFSET PIECES_ORIGIN ;offset from first piece
-	MOV [PIECE_DEFINITION], AX ; piece_definition now points to the first of 
-                               ; four piece orientations of a specific piece 
+	ADD AX, OFFSET PIECES_ORIGIN
+	MOV [PIECE_DEFINITION], AX
 	
-	; make next piece current -  piece orientation index
 	MOV AX, [NEXT_PIECE_ORIENTATION_INDEX]
-	MOV [PIECE_ORIENTATION_INDEX], AX ;choose one of the four orientations
+	MOV [PIECE_ORIENTATION_INDEX], AX
 	
 	CALL PROCEDURE_COPY_PIECE
 	
-	; temporarily move current piece to the Next display area
-	MOV [PIECE_POSITION], 17805 ; move piece to where next 
-                                ; piece is displayed
+	MOV [PIECE_POSITION], 17805
 	
-	; set colour in dl
 	MOV BX, [CURRENT_PIECE_COLOR_INDEX]
 	SHL BX, 1
 	MOV DL, [COLOR_FALLING_PIECE + BX]
 	CALL PROCEDURE_DRAW_PIECE
 	
-	; revert current piece to what is truly the current piece
 	POP [PIECE_POSITION]
 	POP [PIECE_ORIENTATION_INDEX]
 	POP [PIECE_DEFINITION]
 	POP [CURRENT_PIECE_COLOR_INDEX]
 	CALL PROCEDURE_COPY_PIECE
 	
-	; Repeat from here on down as the current piece is falling
 	MAIN_LOOP:
-	  ; advance frame
 	  MOV AX, [CURRENT_FRAME]
 	  INC AX
 	  MOV [CURRENT_FRAME], AX
 	  
 	  CALL PROCEDURE_DELAY
 	  
-	  ; reset position delta and input state
 	  MOV [PIECE_POSITION_DELTA], 0
 	  MOV [PLAYER_INPUT_PRESSED], 0
 	  
-	  ; animate logo
 	  CALL PROCEDURE_DISPLAY_LOGO
 	  
 	READ_INPUT:
-	  ; read input, exiting game if the player chose to
 	  CALL PROCEDURE_READ_CHARACTER
 	  CMP [MUST_QUIT], 0
-	  JE HANDLE_HORIZONTAL_MOVE
-	  ; [piece_position_delta] now contains modification from input
+	  JNE DONE1
 	  
 	DONE1:
 	  MOV AX, 3
 	  INT 10H
 	  RET
-	
-    ; if the player didn't press left or right, skip directly to where we 
-    ; handle vertical movement	
+	  
 	HANDLE_HORIZONTAL_MOVE:
 	  MOV AX, [PIECE_POSITION_DELTA]
 	  TEST AX, AX
-	  JZ HANDLE_VERTICAL_MOVE ;didn't press left or right
+	  JZ HANDLE_VERTICAL_MOVE
 	  
-	  ; either left or right was pressed, so shift piece horizontally
-      ; according to how delta was set
 	  CALL PROCEDURE_APPLY_DELTA_AND_DRAW_PIECE
 	  
 	HANDLE_VERTICAL_MOVE:
-	  ; for each of the blocks in the current piece
-	  MOV CX, [BLOCKS_PER_PIECE] ;each piece has 4 blocks
+	  MOV CX, [BLOCKS_PER_PIECE]
 	HANDLE_VERTICAL_MOVE_LOOP:
-	  ; position di to the origin of current block
-	  MOV DI, [PIECE_POSITION] ; start from the origin of the piece
+	  MOV DI, [PIECE_POSITION]
 	  MOV BX, CX
 	  SHL BX, 1
 	  SUB BX, 2
-	  ADD DI, [PIECE_BLOCKS + BX] ; shift position in the piece 
-                                  ; to the position of current block
+	  ADD DI, [PIECE_BLOCKS + BX]
 	  
-	  ; if current block cannot move down, then the whole piece cannot move down
 	  CALL PROCEDURE_CAN_MOVE_DOWN
-	  TEST AL, AL ;non-zero indicates an obstacle below
+	  TEST AL, AL
 	  JNZ HANDLE_VERTICAL_MOVE_LOOP_FAILURE
-	  ; check next block
+	  
 	  LOOP HANDLE_VERTICAL_MOVE_LOOP
-	  ; all blocks can move down means that the piece can move down
+	  
 	  JMP HANDLE_VERTICAL_MOVE_MOVE_DOWN_SUCCESS
 	  
 	HANDLE_VERTICAL_MOVE_LOOP_FAILURE:
-	  ; we get here when the piece can no longer fall
 	  MOV AL, [PLAYER_INPUT_PRESSED]
 	  TEST AL, AL
 	  
-	  ; if no player input is present during this last frame, then cement right 
-      ; away, because the player isn't trying to slide or rotate the piece at the
-      ; last moment, as it is landing ( shortly after ); this would ultimately
-      ; introduced an unnecessary delay when the piece lands, when the player
-      ; is already expecting the next piece
 	  JZ HANDLE_V_MOVE_CEMENT_IMMEDIATELY
 	  
-	  ; decrement and check the cement counter to see if it reached zero
-      ; if it did, then the piece landed a long enough time ago to be cemented
-      ; in place
 	  MOV AL, [CEMENT_COUNTER]
 	  DEC AL
 	  MOV [CEMENT_COUNTER], AL
-	  TEST AL, AL ; if we reached zero now, it means the piece can finally cement
-	  JNZ MAIN_LOOP ; we haven't reached zero yet, so render next frame
-	  ; cement counter is now zero, which means we have to cement the piece
-	
-; Current piece can now be "cemented" on whatever it landed	
+	  TEST AL, AL
+	  JNZ MAIN_LOOP
+	  
 	HANDLE_V_MOVE_CEMENT_IMMEDIATELY:
-	  ; since the cement counter isn't guaranteed to be zero, we should zero it
 	  MOV [CEMENT_COUNTER], 0
 	  
-	  ; it cannot move down, so "cement it in place" by changing its colour
-      ; by indexing in the cemented piece colours array
 	  MOV BX, [CURRENT_PIECE_COLOR_INDEX]
 	  SHL BX, 1
 	  MOV DL, [COLOR_CEMENTED_PIECE + BX]
 	  CALL PROCEDURE_DRAW_PIECE
 	  
-	  ; remove possibly full lines
-	  XOR DX, DX ; we'll accumulate number of lines cleared in dx
-	  MOV CX, 20 ; we're clearing at most 4 lines, each having a height of 5 pixels
+	  XOR DX, DX
+	  MOV CX, 20
 	  
 	HANDLE_V_MOVE_CEMENT_IMMEDIATE_ATTEMPT_CLEAR_LINES_LOOP:
 	  PUSH DX
 	  CALL PROCEDURE_ATTEMPT_LINE_REMOVAL
 	  POP DX
 	  
-	  ; accumulate number of cleared lines in dx and continue to loop
 	  ADD DL, AL
 	  LOOP HANDLE_V_MOVE_CEMENT_IMMEDIATE_ATTEMPT_CLEAR_LINES_LOOP
 	  
 	UPDATE_SCORE:
-	  ; dx now contains number of lines (not block lines!) cleared, so we must
-      ; divide in order to convert to block lines (or actual "tetris" lines)
 	  MOV AX, DX
 	  MOV DL, [BLOCK_SIZE]
-	  DIV DL ; al now contains number of block lines
+	  DIV DL
 	  XOR AH, AH
-	  ; add number of cleared lines to the score
+	  
 	  MOV DX, [SCORE]
 	  ADD AX, DX
 	  
-	  ; if score reached 1000, it rolls back to 0
-	  CMP AX, 1000 ; our scoring goes to 999, so restart at 0 if it goes over
+	  CMP AX, 1000
 	  JL SCORE_IS_NOT_OVER_1000
 	  SUB AX, 1000
 	  
 	SCORE_IS_NOT_OVER_1000:
 	  MOV [SCORE], AX
-	  ; spawn new piece
+	  
 	  JMP NEW_PIECE
-	 
-    ; Current piece will now move down one pixel	 
+	  
 	HANDLE_VERTICAL_MOVE_MOVE_DOWN_SUCCESS:
-	  ; re-start cement counter, in case the piece landed on something, but the
-      ; player slid it off during the cementing period, causing it to start 
-      ; falling again, in which case we want to allow sliding again when it 
-      ; lands on something again
 	  MOV [CEMENT_COUNTER], 10
 	  
-	  ; it can move down, and our delta will be one pixel lower
 	  MOV AX, [SCREEN_WIDTH]
 	  MOV [PIECE_POSITION_DELTA], AX
-	  ; delta is now one row lower
 	  
-	  ; move piece down and display it
 	  CALL PROCEDURE_APPLY_DELTA_AND_DRAW_PIECE
 	  
-	  ; render next frame
 	  JMP MAIN_LOOP
 	  
-	  ; Game has ended because the screen has filled up (next piece can no longer spawn)
 	GAME_OVER:
-	  ; draw game over overlay panel, and hide left/right/rotate controls
 	  CALL PROCEDURE_DISPLAY_GAME_OVER
 	  
 	GAME_OVER_LOOP:
-	  ; still display logo
 	  CALL PROCEDURE_DISPLAY_LOGO
 	  
 	  CALL PROCEDURE_DELAY
 	  
-	  ; advance frame, since we're still animating the logo
 	  MOV AX, [CURRENT_FRAME]
 	  INC AX
 	  MOV [CURRENT_FRAME], AX
 	  
-	  ; check whether any key is pressed
 	  MOV AH, 1
-	  INT 16H ; any key pressed ?
-	  JZ GAME_OVER_LOOP ; no key pressed
+	  INT 16H
+	  JZ GAME_OVER_LOOP
 	  
-	  ; read key
 	  XOR AH, AH
 	  INT 16H
 	  CMP AL, 'q'
-	  JNE GAME_OVER_LOOP ; wait for Q to be pressed to exit the program
+	  JNE GAME_OVER_LOOP
 	
-	; Exit to the operating system
-	DONE:
-	  ; change video mode to 80x25 text mode
+	DONE2:
 	  MOV AX, 3
-	  INT 10H ; restore text mode
+	  INT 10H
 	
   RET	
 INITIALIZATION ENDP
