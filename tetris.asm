@@ -564,44 +564,6 @@ _SET_CURSOR	PROC NEAR
 			RET
 _SET_CURSOR ENDP
 
-_LOADING	PROC NEAR			
-			CALL _CLEAR_SCREEN_LOAD
-
-			MOV		DL, 22H
-			MOV		DH, 11
-			CALL	_SET_CURSOR
-
-			;display loading
-			MOV		AH, 09H
-			LEA		DX, LOAD_STR
-			INT		21H
-
-			MOV		TEMP, 00
-
-	__ITERATE:
-			;set cursor
-			MOV		DL, TEMP
-			MOV		DH, 12
-			CALL	_SET_CURSOR
-
-			MOV		AL, 0DBH
-			MOV		AH, 02H
-			MOV		DL, AL
-			INT		21H
-
-			CALL	_DELAY
-
-			INC		TEMP
-			CMP		TEMP, 50H
-			JE		DONE4
-
-			JMP		__ITERATE
-
-		DONE4:
-			RET
-
-
-_LOADING		ENDP
 
 ; Convert current score to a string, and display it
 PROCEDURE_DISPLAY_SCORE PROC NEAR
