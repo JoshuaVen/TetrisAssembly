@@ -312,6 +312,7 @@ _LEFT:;when left button is pressed(from left to right)
 		JE INSTRUCTIONS
 		CMP TEMP2, 3
 		JE HIGHSCOREPAGE1
+		JMP EXIT
 		
 HIGHSCOREPAGE1:
   MOV FLAG, 04
